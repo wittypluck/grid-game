@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY data.py .
 COPY simulation.py .
 COPY app.py .
+COPY transformations.py .
 COPY components/ ./components/
 COPY assets/ ./assets/
 
