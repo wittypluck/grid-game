@@ -20,4 +20,4 @@ EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/ || exit 1
 
-ENTRYPOINT ["python", "app.py"]
+ENTRYPOINT ["gunicorn", "app:server", "--bind", "0.0.0.0:8501", "--workers", "4", "--timeout", "120"]
