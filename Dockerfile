@@ -12,9 +12,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY data.py .
 COPY simulation.py .
 COPY app.py .
+COPY components/ ./components/
+COPY assets/ ./assets/
 
 EXPOSE 8501
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8501/ || exit 1
 
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
+ENTRYPOINT ["python", "app.py"]
