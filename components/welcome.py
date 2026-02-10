@@ -7,11 +7,12 @@ from dash import html, dcc, dash_table
 from data import ORDRE_MERIT, MOYENS_PRODUCTION
 from components.charts import graphique_demande_seule
 from components.metrics import creer_tableau_caracteristiques
+from translations import t
 
 
-def creer_ecran_accueil() -> html.Div:
+def creer_ecran_accueil(lang: str = "fr") -> html.Div:
     """Construit l'écran d'accueil affiché quand aucune unité n'est sélectionnée."""
-    colonnes, donnees = creer_tableau_caracteristiques()
+    colonnes, donnees = creer_tableau_caracteristiques(lang)
 
     return html.Div([
         html.Hr(),
@@ -19,35 +20,32 @@ def creer_ecran_accueil() -> html.Div:
         # 3 boîtes objectif / comment jouer / scoring
         html.Div(className="welcome-grid", children=[
             html.Div(className="info-box", children=[
-                html.H3("🎯 Objectif"),
-                html.P(
-                    "Couvrir 100% de la demande électrique sur une journée de 24 heures "
-                    "en construisant un parc de production optimal."
-                ),
+                html.H3(t("accueil_objectif_titre", lang)),
+                html.P(t("accueil_objectif_texte", lang)),
             ]),
             html.Div(className="info-box", children=[
-                html.H3("📊 Comment jouer"),
-                html.P(
-                    "Utilisez les curseurs dans le panneau de gauche pour choisir "
-                    "le nombre de centrales de chaque type. Les résultats s'afficheront automatiquement."
-                ),
+                html.H3(t("accueil_comment_titre", lang)),
+                html.P(t("accueil_comment_texte", lang)),
             ]),
             html.Div(className="info-box", children=[
-                html.H3("🏆 Scoring"),
+                html.H3(t("accueil_scoring_titre", lang)),
                 html.P([
-                    html.B("Couverture"), " (40 pts) — Couvrir toute la demande", html.Br(),
-                    html.B("CO₂"), " (30 pts) — Minimiser les émissions", html.Br(),
-                    html.B("Coût"), " (30 pts) — Maîtriser le budget",
+                    html.B("Couverture" if lang == "fr" else "Coverage"),
+                    t("accueil_scoring_couverture", lang), html.Br(),
+                    html.B("CO₂"),
+                    t("accueil_scoring_co2", lang), html.Br(),
+                    html.B("Coût" if lang == "fr" else "Cost"),
+                    t("accueil_scoring_cout", lang),
                 ]),
             ]),
         ]),
 
         # Courbe de demande
-        html.H3("📈 Courbe de charge à couvrir (journée type)", className="section-title"),
-        dcc.Graph(figure=graphique_demande_seule(), config={"displayModeBar": False}),
+        html.H3(t("section_courbe_charge", lang), className="section-title"),
+        dcc.Graph(figure=graphique_demande_seule(lang), config={"displayModeBar": False}),
 
         # Tableau des caractéristiques
-        html.H3("📋 Caractéristiques des moyens de production", className="section-title"),
+        html.H3(t("section_caracteristiques", lang), className="section-title"),
         dash_table.DataTable(
             columns=colonnes,
             data=donnees,
@@ -74,24 +72,37 @@ def creer_ecran_accueil() -> html.Div:
 
         # Conseils
         html.Div(className="info-box", children=[
-            html.H4("💡 Conseils"),
+            html.H4(t("conseils_titre", lang)),
             html.Ul([
-                html.Li([html.B("Sources pilotables"), " (✅) : produisent à la demande, très utiles pour suivre la courbe de charge."]),
-                html.Li([html.B("Sources intermittentes"), " (❌) : produisent selon la météo, pas selon vos besoins. Le solaire ne produit rien la nuit !"]),
-                html.Li([html.B("Merit order"), " : les sources les moins chères à produire sont appelées en priorité."]),
-                html.Li(["Attention à l'", html.B("équilibre"), " : trop de production = surplus coûteux, pas assez = blackout !"]),
+                html.Li([
+                    html.B(t("label_sources_pilotables", lang)),
+                    t("conseil_pilotable", lang),
+                ]),
+                html.Li([
+                    html.B(t("label_sources_intermittentes", lang)),
+                    t("conseil_intermittent", lang),
+                ]),
+                html.Li([
+                    html.B("Merit order"),
+                    t("conseil_merit", lang),
+                ]),
+                html.Li([
+                    t("conseil_equilibre_pre", lang),
+                    html.B(t("conseil_equilibre_bold", lang)),
+                    t("conseil_equilibre_post", lang),
+                ]),
             ]),
         ]),
     ])
 
 
-def creer_section_pedagogique() -> html.Details:
+def creer_section_pedagogique(lang: str = "fr") -> html.Details:
     """Crée la section pédagogique repliable."""
     return html.Details(
         style={"marginTop": "1.5rem"},
         children=[
             html.Summary(
-                "💡 Comprendre les résultats — Guide pédagogique",
+                t("pedago_titre", lang),
                 style={
                     "cursor": "pointer",
                     "fontSize": "1.1rem",
@@ -114,32 +125,22 @@ def creer_section_pedagogique() -> html.Details:
                     "color": "#e0e0e0",
                 },
                 children=[
-                    html.H4("Merit Order (Ordre de mérite)"),
-                    html.P(
-                        "Les centrales sont appelées par ordre de coût marginal croissant : "
-                        "d'abord les moins chères à produire (renouvelables, nucléaire), "
-                        "puis les plus chères (gaz, charbon, pétrole). "
-                        "C'est le même principe utilisé sur les vrais marchés de l'électricité en Europe."
-                    ),
-                    html.H4("L'intermittence"),
+                    html.H4(t("pedago_merit_titre", lang)),
+                    html.P(t("pedago_merit_texte", lang)),
+                    html.H4(t("pedago_intermittence_titre", lang)),
                     html.Ul([
-                        html.Li("☀️ Le solaire ne produit que quand il y a du soleil (entre 7h et 20h, pic à 13h)."),
-                        html.Li("🌬️ L'éolien produit de façon variable, souvent plus la nuit."),
-                        html.Li("Ces sources ne sont pas pilotables : elles produisent indépendamment de la demande."),
+                        html.Li(t("pedago_intermittence_1", lang)),
+                        html.Li(t("pedago_intermittence_2", lang)),
+                        html.Li(t("pedago_intermittence_3", lang)),
                     ]),
-                    html.H4("Le défi de l'équilibre"),
-                    html.P("À chaque instant, la production doit être exactement égale à la consommation. Un déséquilibre provoque :"),
+                    html.H4(t("pedago_equilibre_titre", lang)),
+                    html.P(t("pedago_equilibre_texte", lang)),
                     html.Ul([
-                        html.Li([html.B("Déficit"), " → coupures de courant (blackout)"]),
-                        html.Li([html.B("Surplus"), " → gaspillage d'énergie et coûts inutiles"]),
+                        html.Li([html.B(t("pedago_deficit", lang)), t("pedago_deficit_suite", lang)]),
+                        html.Li([html.B(t("pedago_surplus", lang)), t("pedago_surplus_suite", lang)]),
                     ]),
-                    html.H4("Dans la vraie vie"),
-                    html.P(
-                        "Les producteurs d'électricité exploitent un mix diversifié : centrales à gaz, "
-                        "parcs éoliens et solaires, barrages hydroélectriques, et développent le stockage "
-                        "d'énergie et l'hydrogène vert. L'enjeu : atteindre la neutralité carbone tout en "
-                        "garantissant la sécurité d'approvisionnement."
-                    ),
+                    html.H4(t("pedago_realite_titre", lang)),
+                    html.P(t("pedago_realite_texte", lang)),
                 ],
             ),
         ],

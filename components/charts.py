@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from data import MOYENS_PRODUCTION, DEMANDE_HORAIRE, LABELS_HEURES, ORDRE_MERIT
+from translations import t, nom_source
 
 
 # =============================================================================
@@ -36,13 +37,13 @@ _LAYOUT_COMMUN = dict(
 # Graphiques
 # =============================================================================
 
-def graphique_demande_seule() -> go.Figure:
+def graphique_demande_seule(lang: str = "fr") -> go.Figure:
     """Courbe de demande seule (écran d'accueil)."""
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=LABELS_HEURES, y=DEMANDE_HORAIRE,
         mode="lines+markers",
-        name="Demande",
+        name=t("hover_demande", lang),
         line=dict(color="#ff6b6b", width=3),
         marker=dict(size=6),
         fill="tozeroy",
@@ -50,8 +51,8 @@ def graphique_demande_seule() -> go.Figure:
     ))
     fig.update_layout(
         **_LAYOUT_COMMUN,
-        xaxis_title="Heure",
-        yaxis_title="Puissance (MW)",
+        xaxis_title=t("axe_heure", lang),
+        yaxis_title=t("axe_puissance", lang),
         height=400,
         margin=dict(l=60, r=30, t=30, b=60),
         yaxis=dict(range=[0, DEMANDE_HORAIRE.max() * 1.15]),
@@ -62,42 +63,48 @@ def graphique_demande_seule() -> go.Figure:
 def graphique_production_vs_demande(
     df_prod: pd.DataFrame,
     choix_joueur: dict,
+    lang: str = "fr",
 ) -> go.Figure:
     """Graphique principal : aires empilées de production + courbe de demande."""
     fig = go.Figure()
 
     sources_a_afficher = [s for s in ORDRE_MERIT if choix_joueur.get(s, 0) > 0]
 
+    hover_prod = t("hover_production", lang)
+    hover_heure = t("hover_heure", lang)
+
     # Aires empilées par source
     for source_id in sources_a_afficher:
         info = MOYENS_PRODUCTION[source_id]
+        nom = nom_source(source_id, lang)
         fig.add_trace(go.Scatter(
             x=LABELS_HEURES,
             y=df_prod[source_id],
-            name=f"{info['emoji']} {info['nom']}",
+            name=f"{info['emoji']} {nom}",
             stackgroup="production",
             fillcolor=_hex_to_rgba(info["couleur"], 0.8),
             line=dict(width=0.5, color=info["couleur"]),
             hovertemplate=(
-                f"<b>{info['nom']}</b><br>"
-                "Heure: %{x}<br>"
-                "Production: %{y:,.0f} MW<br>"
+                f"<b>{nom}</b><br>"
+                f"{hover_heure}: %{{x}}<br>"
+                f"{hover_prod}: %{{y:,.0f}} MW<br>"
                 "<extra></extra>"
             ),
         ))
 
     # Courbe de demande
+    hover_demande = t("hover_demande", lang)
     fig.add_trace(go.Scatter(
         x=LABELS_HEURES,
         y=DEMANDE_HORAIRE,
-        name="📊 Demande",
+        name=t("legende_demande", lang),
         mode="lines+markers",
         line=dict(color="#ff6b6b", width=3, dash="dot"),
         marker=dict(size=6, color="#ff6b6b"),
         hovertemplate=(
-            "<b>Demande</b><br>"
-            "Heure: %{x}<br>"
-            "Demande: %{y:,.0f} MW<br>"
+            f"<b>{hover_demande}</b><br>"
+            f"{hover_heure}: %{{x}}<br>"
+            f"{hover_demande}: %{{y:,.0f}} MW<br>"
             "<extra></extra>"
         ),
     ))
@@ -108,15 +115,15 @@ def graphique_production_vs_demande(
         fig.add_trace(go.Scatter(
             x=LABELS_HEURES,
             y=np.where(deficit_mask, DEMANDE_HORAIRE, None),
-            name="⚠️ Déficit (blackout)",
+            name=t("legende_deficit", lang),
             mode="markers",
             marker=dict(size=12, color="red", symbol="x"),
         ))
 
     fig.update_layout(
         **_LAYOUT_COMMUN,
-        xaxis_title="Heure de la journée",
-        yaxis_title="Puissance (MW)",
+        xaxis_title=t("axe_heure_journee", lang),
+        yaxis_title=t("axe_puissance", lang),
         height=500,
         margin=dict(l=60, r=30, t=30, b=60),
         legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5),
@@ -129,6 +136,7 @@ def graphique_production_vs_demande(
 def graphique_mix_energetique(
     df_prod: pd.DataFrame,
     choix_joueur: dict,
+    lang: str = "fr",
 ) -> go.Figure:
     """Camembert (donut) du mix énergétique."""
     sources = [s for s in ORDRE_MERIT if choix_joueur.get(s, 0) > 0]
@@ -137,8 +145,11 @@ def graphique_mix_energetique(
     if not prod_par_source:
         return go.Figure()
 
+    hover_prod = t("hover_production", lang)
+    hover_part = t("hover_part", lang)
+
     fig = go.Figure(data=[go.Pie(
-        labels=[f"{MOYENS_PRODUCTION[s]['emoji']} {MOYENS_PRODUCTION[s]['nom']}" for s in prod_par_source],
+        labels=[f"{MOYENS_PRODUCTION[s]['emoji']} {nom_source(s, lang)}" for s in prod_par_source],
         values=list(prod_par_source.values()),
         marker_colors=[MOYENS_PRODUCTION[s]["couleur"] for s in prod_par_source],
         hole=0.4,
@@ -146,8 +157,8 @@ def graphique_mix_energetique(
         textposition="outside",
         hovertemplate=(
             "<b>%{label}</b><br>"
-            "Production: %{value:,.0f} MWh<br>"
-            "Part: %{percent}<br>"
+            f"{hover_prod}: %{{value:,.0f}} MWh<br>"
+            f"{hover_part}: %{{percent}}<br>"
             "<extra></extra>"
         ),
     )])
@@ -155,12 +166,17 @@ def graphique_mix_energetique(
     return fig
 
 
-def graphique_decomposition_score(indicateurs: dict) -> go.Figure:
+def graphique_decomposition_score(indicateurs: dict, lang: str = "fr") -> go.Figure:
     """Barres de décomposition du score (max en fond, score réel par-dessus)."""
     couverture = indicateurs["taux_couverture"]
     couv_color = "#44ff44" if couverture >= 100 else "#ffaa00" if couverture >= 90 else "#ff4444"
 
-    categories = ["Couverture\n(/40)", "CO₂\n(/30)", "Coût\n(/30)", "Surplus\n(malus)"]
+    categories = [
+        t("score_couverture", lang),
+        t("score_co2", lang),
+        t("score_cout", lang),
+        t("score_surplus", lang),
+    ]
     valeurs = [
         indicateurs["score_couverture"],
         indicateurs["score_co2"],
@@ -172,11 +188,11 @@ def graphique_decomposition_score(indicateurs: dict) -> go.Figure:
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
-        x=categories, y=max_valeurs, name="Maximum",
+        x=categories, y=max_valeurs, name=t("score_max", lang),
         marker_color="rgba(100,100,100,0.3)", hoverinfo="skip",
     ))
     fig.add_trace(go.Bar(
-        x=categories, y=valeurs, name="Votre score",
+        x=categories, y=valeurs, name=t("score_votre", lang),
         marker_color=couleurs,
         text=[f"{v:+.0f}" if v < 0 else f"{v:.0f}" for v in valeurs],
         textposition="auto",
@@ -191,36 +207,36 @@ def graphique_decomposition_score(indicateurs: dict) -> go.Figure:
     return fig
 
 
-def graphique_cout_par_source(indicateurs: dict) -> go.Figure:
+def graphique_cout_par_source(indicateurs: dict, lang: str = "fr") -> go.Figure:
     """Barres empilées construction + production par source."""
     details = indicateurs["details_par_source"]
     if not details:
         return go.Figure()
 
     sources = list(details.keys())
-    noms = [MOYENS_PRODUCTION[s]["nom"] for s in sources]
+    noms = [nom_source(s, lang) for s in sources]
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
         x=noms,
         y=[details[s]["cout_construction"] for s in sources],
-        name="Construction", marker_color="#00AAFF",
+        name=t("legende_construction", lang), marker_color="#00AAFF",
     ))
     fig.add_trace(go.Bar(
         x=noms,
         y=[details[s]["cout_production"] for s in sources],
-        name="Production", marker_color="#A0D911",
+        name=t("legende_production", lang), marker_color="#A0D911",
     ))
     fig.update_layout(
         **_LAYOUT_COMMUN,
         barmode="stack", height=350, margin=dict(l=40, r=20, t=20, b=60),
-        yaxis_title="Coût (M€)",
+        yaxis_title=t("axe_cout", lang),
         legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
     )
     return fig
 
 
-def graphique_co2_par_source(indicateurs: dict) -> go.Figure:
+def graphique_co2_par_source(indicateurs: dict, lang: str = "fr") -> go.Figure:
     """Barres de CO₂ par source."""
     details = indicateurs["details_par_source"]
     if not details:
@@ -230,7 +246,7 @@ def graphique_co2_par_source(indicateurs: dict) -> go.Figure:
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
-        x=[MOYENS_PRODUCTION[s]["nom"] for s in sources],
+        x=[nom_source(s, lang) for s in sources],
         y=[details[s]["co2_tonnes"] for s in sources],
         marker_color=[MOYENS_PRODUCTION[s]["couleur"] for s in sources],
         text=[f"{details[s]['co2_tonnes']:,.0f}" for s in sources],
@@ -239,6 +255,6 @@ def graphique_co2_par_source(indicateurs: dict) -> go.Figure:
     fig.update_layout(
         **_LAYOUT_COMMUN,
         height=350, margin=dict(l=40, r=20, t=20, b=60),
-        yaxis_title="CO₂ (tonnes)", showlegend=False,
+        yaxis_title=t("axe_co2", lang), showlegend=False,
     )
     return fig

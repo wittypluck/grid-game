@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a **Dash educational game** simulating France's electricity grid balancing. Players build an energy mix and the app dispatches production hourly using merit order logic. The UI is entirely in **French**; keep all user-facing text in French.
+This is a **Dash educational game** simulating France's electricity grid balancing. Players build an energy mix and the app dispatches production hourly using merit order logic. The UI supports **French and English** with a flag toggle (🇫🇷/🇬🇧). All user-facing text is managed via `translations.py`.
 
 ## Tech Stack
 
@@ -24,9 +24,10 @@ This is a **Dash educational game** simulating France's electricity grid balanci
 | `components/metrics.py`  | Metric cards, status messages, data table builders                   |
 | `components/charts.py`   | All Plotly chart builder functions                                   |
 | `components/welcome.py`  | Welcome screen and pedagogical section                               |
+| `translations.py`        | i18n — FR/EN translation dictionaries, `t()` and `nom_source()`     |
 | `assets/style.css`       | Dark theme CSS (auto-served by Dash)                                 |
 
-**Strict separation**: `data.py` has no imports from other project files. `simulation.py` imports only from `data.py`. `components/` modules import from `data.py` only. `app.py` imports from `data.py`, `simulation.py`, and `components/`.
+**Strict separation**: `data.py` has no imports from other project files. `simulation.py` imports only from `data.py`. `translations.py` imports from `data.py` only (lazy, inside `nom_source()`). `components/` modules import from `data.py` and `translations.py`. `app.py` imports from `data.py`, `simulation.py`, `translations.py`, and `components/`.
 
 ## Key Data Structures
 
@@ -68,7 +69,8 @@ Columns: `heure`, `label`, `demande_mw`, one column per source (MW produced that
 
 ## Coding Conventions
 
-- **Language**: all UI strings, variable names, comments, and docstrings are in **French**
+- **Language**: variable names, comments, and docstrings are in **French**. All user-facing strings are in `translations.py` with FR/EN versions
+- **i18n pattern**: every component function accepts a `lang` parameter (`"fr"` or `"en"`). Use `t(key, lang)` for static text and `nom_source(source_id, lang)` for energy source names. Never hardcode user-facing text in components
 - **Naming**: snake_case throughout; source IDs are lowercase French: `nucleaire`, `hydraulique`, `eolien`, `solaire`, `charbon`, `gaz`, `petrole`
 - **Units**: MW for power, MWh for energy, M€ for costs, gCO₂/kWh for emissions, tonnes for total CO₂
 - **Charts**: always use `plotly_dark` template with transparent backgrounds (`rgba(0,0,0,0)`)
@@ -81,7 +83,8 @@ Columns: `heure`, `label`, `demande_mw`, one column per source (MW produced that
 1. Add entry to `MOYENS_PRODUCTION` in `data.py` with all required keys
 2. Add the source ID to `ORDRE_MERIT` list at the appropriate position (dispatch priority)
 3. If intermittent, create a `PROFIL_<SOURCE>` numpy array (24 elements, 0–1) in `data.py` and add a condition in `calculer_production_horaire` pass 1
-4. No changes needed in `app.py` — it dynamically iterates over `ORDRE_MERIT`
+4. Add the English name to `NOMS_SOURCES_EN` in `translations.py`
+5. No changes needed in `app.py` — it dynamically iterates over `ORDRE_MERIT`
 
 ### Changing the demand curve
 Edit `DEMANDE_HORAIRE` in `data.py`. It's a 24-element numpy array of MW values, index = hour.
@@ -114,7 +117,16 @@ Would require a third dispatch pass in `calculer_production_horaire`: charge dur
 ## Dash-Specific Notes
 
 - **No WebSocket**: Dash uses HTTP POST for all callbacks — firewall-friendly.
-- **Callback pattern**: one main callback in `app.py` takes all 7 slider `Input`s and returns all `Output`s (content, sidebar summary, warning).
+- **Callback pattern**: one main callback in `app.py` takes `lang-store` + 7 slider `Input`s and returns 7 `Output`s (content, title, subtitle, sidebar, invest, puissance, warning). Two clientside callbacks handle language button state.
 - **`server = app.server`**: exposed for WSGI deployment (gunicorn, etc.).
 - **Assets folder**: `assets/style.css` is auto-served by Dash at `/_dash-component-suites/`. No manual linking needed.
 - **Chart config**: all `dcc.Graph` use `config={"displayModeBar": False}` to hide the Plotly toolbar.
+
+## Internationalization (i18n)
+
+- **Language store**: `dcc.Store(id="lang-store")` holds the current language (`"fr"` or `"en"`). Default is `"fr"`.
+- **Flag toggle**: two `html.Button` elements (🇫🇷 / 🇬🇧) in `.lang-switcher` div, positioned top-right via CSS. A clientside callback updates the store instantly (no server round-trip).
+- **Translation lookup**: `t(key, lang)` in `translations.py`. ~80 keys cover all UI text. `nom_source(source_id, lang)` translates energy source names.
+- **Component pattern**: every component builder (`creer_sidebar`, `creer_metriques`, `graphique_*`, etc.) accepts a `lang` parameter. The main callback reads `lang-store` and passes it through.
+- **Sidebar rebuild**: when language changes, the entire sidebar is rebuilt via `creer_sidebar(lang, choix_joueur)` which preserves current slider values.
+- **Adding a translation**: add a new entry to `_TRADUCTIONS` dict in `translations.py` with `{"fr": ..., "en": ...}`, then use `t("new_key", lang)` in the component.

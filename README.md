@@ -35,6 +35,7 @@ grid-game/
 ├── app.py                  # Dash entry point — layout & main callback
 ├── data.py                 # Data model — energy sources, demand curve, profiles
 ├── simulation.py           # Simulation engine — dispatch, KPIs, scoring
+├── translations.py         # i18n — FR/EN translation dictionaries & helpers
 ├── components/             # UI components (one module per concern)
 │   ├── __init__.py
 │   ├── sidebar.py          # Slider controls & player choices
@@ -68,16 +69,25 @@ Two main functions:
 
 - **`calculer_indicateurs(choix_joueur, df_production)`** — computes KPIs: construction cost, production cost, LCOE (amortized), CO₂ emissions, coverage rate, composite score.
 
+### translations.py — Internationalization (i18n)
+
+Central translation module providing bilingual support (French / English):
+
+- **`t(key, lang)`** — looks up a translation key and returns the string in the requested language (`"fr"` or `"en"`), with French fallback
+- **`nom_source(source_id, lang)`** — returns the display name of an energy source in the requested language
+- **`NOMS_SOURCES_EN`** — mapping of source IDs to English names (Coal, Natural Gas, Oil, Nuclear, Hydro, Solar, Wind)
+- ~80 translation keys covering all UI text: titles, sidebar labels, metric cards, status messages, chart axes/legends/hover templates, welcome screen, pedagogical guide, table headers, and footer
+
 ### app.py + components/ — Dash UI
 
 The UI layer is built with **Dash** (HTTP-only, no WebSocket) and split into focused modules:
 
-- **`app.py`** — Dash app initialization, layout assembly, and main callback (wires slider inputs to all outputs)
-- **`components/sidebar.py`** — builds sidebar with 7 sliders + summary; `lire_choix_joueur()` converts slider values to game dict
-- **`components/metrics.py`** — metric card generation, status messages (success/warning/alert), data table helpers
-- **`components/charts.py`** — all 6 Plotly chart builders (production stack, demand curve, pie chart, score bars, cost bars, CO₂ bars)
-- **`components/welcome.py`** — welcome screen layout and pedagogical accordion
-- **`assets/style.css`** — dark theme CSS (auto-served by Dash from the `assets/` folder)
+- **`app.py`** — Dash app initialization, layout assembly, language toggle (🇫🇷/🇬🇧 flags via `dcc.Store` + clientside callbacks), and main callback (wires slider inputs + language to all outputs)
+- **`components/sidebar.py`** — builds sidebar with 7 sliders + summary; `lire_choix_joueur()` converts slider values to game dict; accepts `lang` and `valeurs` to preserve slider state across language switches
+- **`components/metrics.py`** — metric card generation, status messages (success/warning/alert), data table helpers — all accept `lang` for translated labels
+- **`components/charts.py`** — all 6 Plotly chart builders (production stack, demand curve, pie chart, score bars, cost bars, CO₂ bars) — axis titles, legends, and hover templates translated via `lang`
+- **`components/welcome.py`** — welcome screen layout and pedagogical accordion — fully translated
+- **`assets/style.css`** — dark theme CSS (auto-served by Dash from the `assets/` folder), includes language switcher styling
 
 Custom dark theme with Engie-inspired color scheme (blue `#00AAFF` / green `#A0D911`)
 
@@ -141,4 +151,6 @@ docker run -p 8501:8501 grid-game
 
 ## Language
 
-The application UI is in **French**. Code comments and variable names use French terminology. This README is in English for broader accessibility.
+The application supports **French** and **English**. A language toggle (🇫🇷 / 🇬🇧 flag buttons) is located in the top-right corner of the main content area. All UI text — titles, labels, metric cards, chart axes and hover text, status messages, the welcome screen, and the pedagogical guide — switches instantly when a flag is clicked. The default language is French.
+
+Code comments, variable names, and internal identifiers use French terminology. Translations are centralized in `translations.py`.
