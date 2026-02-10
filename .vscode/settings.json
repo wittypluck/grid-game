@@ -1,0 +1,12 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^C:/Users/TW6586/Downloads/python-grid-game/\\.venv/Scripts/streamlit\\.exe run C:/Users/TW6586/Downloads/python-grid-game/app\\.py --server\\.headless true$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^C:/Users/TW6586/Downloads/python-grid-game/\\.venv/Scripts/python\\.exe C:/Users/TW6586/Downloads/python-grid-game/find_optimal_fast\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

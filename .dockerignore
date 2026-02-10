@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+*.pyc
+find_optimal*.py
+test_quick.py
